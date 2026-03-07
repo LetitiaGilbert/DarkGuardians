@@ -13,5 +13,13 @@ node_modules
 /coverage
 /coverage.json
 
-# Hardhat Ignition local deployment output
-ignition/deployments/chain-31337
+# snark/circom generated artifacts
+proof_*.json
+*.wtns
+*.sym
+*.r1cs
+*.zkey
+*.ptau
+
+# temporary/debug files
+*.log
