@@ -2,7 +2,7 @@ const fs = require("fs")
 
 async function main() {
 
- const oracleAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+const oracleAddress = "0x65F0bfE000a715ED45caBE9858b0849C5f6873A7"
 
  const oracle = await ethers.getContractAt(
    "ReputationOracle",
@@ -40,8 +40,12 @@ async function main() {
  )
 
  await tx.wait()
-
- console.log("CID reputation submitted to blockchain")
+console.log("CID HEX:", cid)
+console.log("Score:", score)
+console.log("Category:", category)
+console.log("Proof Bytes:", proofBytes)
+console.log("Nullifier:", nullifier)
+console.log("CID reputation submitted to blockchain")
 
 }
 
