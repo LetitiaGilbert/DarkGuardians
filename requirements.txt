@@ -1,5 +1,15 @@
-torch
-torchvision
-transformers
-pillow
-requests
+torch>=2.2.0
+torchvision>=0.17.0
+
+# Hugging Face
+transformers>=4.40.0
+tokenizers>=0.19.0
+
+# Image processing
+Pillow>=10.0.0
+
+# HTTP
+requests>=2.31.0
+
+# Utilities
+numpy>=1.26.0

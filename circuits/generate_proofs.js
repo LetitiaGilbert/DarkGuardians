@@ -3,14 +3,34 @@ const { buildPoseidon } = require("circomlibjs");
 const fs = require("fs");
 const path = require("path");
 
+const SCAN_RESULTS_FILE = path.join(__dirname, "../scan_results.json");
+const PROCESSED_FILE = path.join(__dirname, "processed_cids.json");
+
 function cidToNumber(cidString) {
     const hex = Buffer.from(cidString).toString("hex").slice(0, 30);
     return BigInt("0x" + hex);
 }
 
+function loadProcessed() {
+    if (!fs.existsSync(PROCESSED_FILE)) return {};
+    return JSON.parse(fs.readFileSync(PROCESSED_FILE));
+}
+
+function markProcessed(cid) {
+    const processed = loadProcessed();
+    processed[cid] = Date.now();
+    fs.writeFileSync(PROCESSED_FILE, JSON.stringify(processed, null, 2));
+}
+
 async function generateProofFromScan(scanResult) {
     if (scanResult.status === "SCAN_ERROR") {
-        console.log("Skipping — scan errored out");
+        console.log(`Skipping ${scanResult.cid} — scan error`);
+        return;
+    }
+
+    const processed = loadProcessed();
+    if (processed[scanResult.cid]) {
+        console.log(`Skipping ${scanResult.cid} — already processed`);
         return;
     }
 
@@ -24,11 +44,8 @@ async function generateProofFromScan(scanResult) {
     const cidHash = F.toString(poseidon([CID]));
     const nullifier = F.toString(poseidon([CID, reporterSecret]));
 
-    console.log(`\nGenerating ZK proof for CID: ${scanResult.cid}`);
-    console.log(`Status: ${scanResult.status}`);
-    console.log(`Confidence: ${scanResult.threat_confidence}`);
-    console.log(`cidHash: ${cidHash}`);
-    console.log(`nullifier: ${nullifier}`);
+    console.log(`\nGenerating proof for CID: ${scanResult.cid}`);
+    console.log(`Status: ${scanResult.status} | Confidence: ${scanResult.threat_confidence}`);
 
     const input = {
         CID: CID.toString(),
@@ -54,19 +71,40 @@ async function generateProofFromScan(scanResult) {
         publicInputs: pubInputs,
         cidHash,
         nullifier,
-        scanResult: isMalicious
+        scanResult: isMalicious,
+        timestamp: Date.now()
     };
 
-    const outFile = `proof_${scanResult.cid.slice(-8)}.json`;
+    const outFile = path.join(__dirname, `proof_${scanResult.cid.slice(-8)}.json`);
     fs.writeFileSync(outFile, JSON.stringify(output, null, 2));
-    console.log(`\n✅ Proof saved to ${outFile}`);
-    console.log("Ready to submit to Reputation Oracle on-chain!");
+    console.log(`✅ Proof saved to ${path.basename(outFile)}`);
+
+    markProcessed(scanResult.cid);
 }
 
-const engineOutputs = [
-    { cid: "bafkreiahcebggvpoaetkf34dwqgjs36edagngk7iji2xewv66ebxzqsiui", status: "MALICIOUS", threat_confidence: "91.23%" },
-    { cid: "bafybeia4dr36hwlw5pweiglkrvitxb3kxepf5oenm25wgurgfwljcr5jdq", status: "SAFE", threat_confidence: "12.00%" },
-    { cid: "bafkreibyrraiggav25rd7djxk7ekbgd62tflbzel2oxrzw3amrjmlsn6te", status: "MALICIOUS", threat_confidence: "88.50%" }
-];
+async function checkForNewScans() {
+    if (!fs.existsSync(SCAN_RESULTS_FILE)) {
+        console.log("Waiting for scan_results.json...");
+        return;
+    }
 
-Promise.all(engineOutputs.map(generateProofFromScan)).catch(console.error);
+    let results;
+    try {
+        results = JSON.parse(fs.readFileSync(SCAN_RESULTS_FILE));
+    } catch (e) {
+        console.log("scan_results.json not ready yet, waiting...");
+        return;
+    }
+
+    for (const result of results) {
+        await generateProofFromScan(result);
+    }
+}
+
+// Watch for new results every 10 seconds
+console.log("👀 WhisperGuard ZKP Watcher running...");
+console.log(`Watching for: ${SCAN_RESULTS_FILE}`);
+console.log("Press Ctrl+C to stop\n");
+
+checkForNewScans();
+setInterval(checkForNewScans, 10000);
