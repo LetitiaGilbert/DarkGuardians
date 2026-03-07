@@ -8,6 +8,7 @@ import json
 TEST_CIDS = [
     "bafkreiahcebggvpoaetkf34dwqgjs36edagngk7iji2xewv66ebxzqsiui",
     "bafybeia4dr36hwlw5pweiglkrvitxb3kxepf5oenm25wgurgfwljcr5jdq",
+    "bafkreibyrraiggav25rd7djxk7ekbgd62tflbzel2oxrzw3amrjmlsn6te",
 ]
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -23,50 +24,37 @@ def scan_cid(cid):
         resp = requests.get(url, timeout=10)
         img = Image.open(BytesIO(resp.content)).convert("RGB")
         
-        # We ask the AI to compare the image against these labels
-        # labels = ["a safe digital asset", "a crypto wallet login page", "a phishing scam website"]
-        # labels = [
-        #     "a safe digital asset", 
-        #     "a crypto wallet login page", 
-        #     "a deceptive phishing website",
-        #     "a generic photo or everyday object" 
-        # ]
         labels = [
-            "a photo of an animal or nature",           # Anchor for the dog
-            "a generic social media screenshot",        # Anchor for random UI
-            "a clean digital art piece or NFT",         # Anchor for actual assets
-            "a cryptocurrency wallet login interface",  # TARGET
-            "a banking website login form"              # TARGET
+            "a photo of an animal or nature",         
+            "a generic social media screenshot",       
+            "a clean digital art piece or NFT",       
+            "a cryptocurrency wallet login interface",  
+            "a banking website login form"              
         ]
         inputs = processor(text=labels, images=img, return_tensors="pt", padding=True).to(device)
         
-        # with torch.no_grad():
-        #     probs = model(**inputs).logits_per_image.softmax(dim=1).cpu().numpy()[0]
-        
-        # threat_score = float(max(probs[1], probs[2]))
-        # return {
-        #     "cid": cid,
-        #     "status": "MALICIOUS" if threat_score > 0.7 else "SAFE",
-        #     "score": f"{threat_score:.2%}",
-        #     "analysis": labels[probs.argmax()]
-        # }
         with torch.no_grad():
             probs = model(**inputs).logits_per_image.softmax(dim=1).cpu().numpy()[0]
 
-        # Malicious indices in the new list: 3 and 4
         malicious_indices = [3, 4]
         winning_idx = probs.argmax()
         threat_score = float(probs[3] + probs[4])
 
-        # Only flag if a malicious label actually WON the classification
         is_malicious = (winning_idx in malicious_indices) and (threat_score > 0.85)
-        
+
+        if is_malicious:
+            analysis_text = "Crypto-Drainer Signature Detected" if winning_idx == 3 else "Financial UI Detected"
+        else:
+            analysis_text = "Verified Safe (Common Asset/Object)"
+
         return {
             "cid": cid,
             "status": "MALICIOUS" if is_malicious else "SAFE",
             "threat_confidence": f"{threat_score:.2%}",
-            "analysis": labels[winning_idx] if is_malicious else "Content verified as safe/non-phishing"
+            "analysis": analysis_text,
+            "engine": "WhisperGuard-CLIP-V1"
         }
+        
     except Exception as e:
         return {"cid": cid, "status": "SCAN_ERROR", "error": str(e)}
 
