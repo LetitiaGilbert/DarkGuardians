@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-node_modules/
+/Users/letitiagilbert/Desktop/DarkGuardians/DarkGuardians/contracts/node_modules
 # C extensions
 *.so
 
