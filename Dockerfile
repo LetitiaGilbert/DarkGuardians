@@ -1,15 +1,22 @@
-FROM nvidia/cuda:12.2.0-base-ubuntu22.04
+# arm64-native base image — runs natively on Apple Silicon M2
+FROM --platform=linux/arm64 python:3.10-slim
 
-# Install Python
-RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
+# System deps
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install dependencies
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121
 
-# Copy logic
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY engine.py .
 
-CMD ["python3", "engine.py"]
+CMD ["python", "engine.py"]
