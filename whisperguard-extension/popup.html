@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WhisperGuard</title>
+<style>
+body{
+ font-family:Segoe UI, Arial, sans-serif;
+ padding:12px;
+ width:320px;
+ background:#0f172a;
+ color:#e2e8f0;
+ margin:0;
+}
+.card{
+ border:1px solid rgba(255,255,255,0.2);
+ border-radius:10px;
+ padding:10px;
+ background:rgba(255,255,255,0.04);
+ margin-bottom:10px;
+}
+.label{
+ font-size:11px;
+ opacity:0.8;
+ margin-bottom:4px;
+}
+.value{
+ font-size:13px;
+ word-break:break-all;
+}
+.status{
+ font-weight:600;
+}
+.muted{
+ opacity:0.8;
+ font-size:12px;
+}
+</style>
+</head>
+
+<body>
+<h3 style="margin:0 0 10px 0;">WhisperGuard</h3>
+
+<div class="card">
+ <div class="label">Active CID</div>
+ <div id="cid" class="value">Detecting...</div>
+</div>
+
+<div class="card">
+ <div class="label">Verdict</div>
+ <div id="verdict" class="value status">Checking...</div>
+ <div id="score" class="muted"></div>
+</div>
+
+<div class="card">
+ <div class="label">Backend Pipeline</div>
+ <div id="pipeline" class="value">Idle</div>
+ <div id="hint" class="muted"></div>
+</div>
+
+<script src="popup.js"></script>
+
+</body>
+</html>

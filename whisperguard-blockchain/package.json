@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "hardhat compile",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "submit:dry": "hardhat run scripts/submitProof.js --network sepolia",
+    "fullflow:sepolia": "hardhat run scripts/fullFlow.js --network sepolia"
   },
   "keywords": [],
   "author": "",

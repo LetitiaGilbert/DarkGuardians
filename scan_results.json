@@ -1,37 +1,9 @@
 [
   {
-    "cid": "bafkreiahcebggvpoaetkf34dwqgjs36edagngk7iji2xewv66ebxzqsiui",
+    "cid": "bafkreicvaxehqhafed7y35z32eqimxbm27qw2amfq5lvbj7uxggudz25q4",
     "status": "MALICIOUS",
-    "threat_confidence": "99.89%",
+    "threat_confidence": "100.00%",
     "analysis": "Financial UI Detected",
     "engine": "WhisperGuard-CLIP-V1"
-  },
-  {
-    "cid": "bafybeia4dr36hwlw5pweiglkrvitxb3kxepf5oenm25wgurgfwljcr5jdq",
-    "status": "SAFE",
-    "threat_confidence": "17.32%",
-    "analysis": "Verified Safe (Common Asset/Object)",
-    "engine": "WhisperGuard-CLIP-V1"
-  },
-  {
-    "cid": "bafkreibyrraiggav25rd7djxk7ekbgd62tflbzel2oxrzw3amrjmlsn6te",
-    "status": "MALICIOUS",
-    "threat_confidence": "99.41%",
-    "analysis": "Financial UI Detected",
-    "engine": "WhisperGuard-CLIP-V1"
-  },
-  {
-    "status": "MALICIOUS",
-    "analysis": "Wallet Drainer Pattern(s) Detected: ['eth_sendTransaction', 'setApprovalForAll', 'transferFrom(', 'permit(']",
-    "threat_confidence": "76.71%",
-    "engine": "WhisperGuard-CodeBERT-V1",
-    "cid": "bafkreibxnbxru74752ktlbfqh4wtco6wx57dlgiijfbqb6wgodvcj6ugai"
-  },
-  {
-    "status": "SAFE",
-    "analysis": "No malicious script patterns detected",
-    "threat_confidence": "70.45%",
-    "engine": "WhisperGuard-CodeBERT-V1",
-    "cid": "QmZ9ZeAH15ybHpZa9Em1YjGf3b9h8UkYoLze46HyxZcHX9"
   }
 ]

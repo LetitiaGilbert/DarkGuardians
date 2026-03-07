@@ -1,5 +1,10 @@
 async function main() {
 
+  const signers = await ethers.getSigners();
+  if (!signers.length) {
+    throw new Error("No signer configured for deployment. Set PRIVATE_KEY in terminal session only, e.g. $env:PRIVATE_KEY='<key>' (PowerShell), then run deploy again.");
+  }
+
   const Verifier = await ethers.getContractFactory("ZKVerifier");
   const verifier = await Verifier.deploy();
   await verifier.waitForDeployment();

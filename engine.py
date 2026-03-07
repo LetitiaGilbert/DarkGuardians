@@ -6,6 +6,7 @@ import requests
 from io import BytesIO
 import json
 import os
+import argparse
 
 TEST_CIDS = [
     "bafkreiahcebggvpoaetkf34dwqgjs36edagngk7iji2xewv66ebxzqsiui",
@@ -179,7 +180,12 @@ def scan_cid(cid):
 
 
 if __name__ == "__main__":
-    results = [scan_cid(c) for c in TEST_CIDS]
+    parser = argparse.ArgumentParser(description="WhisperGuard CID scanning engine")
+    parser.add_argument("--cid", action="append", help="CID to scan. Repeat flag for multiple CIDs")
+    args = parser.parse_args()
+
+    cids_to_scan = args.cid if args.cid else TEST_CIDS
+    results = [scan_cid(c) for c in cids_to_scan]
 
     # Pretty print to console
     print(json.dumps(results, indent=2))

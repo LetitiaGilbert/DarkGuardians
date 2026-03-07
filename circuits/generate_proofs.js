@@ -6,6 +6,11 @@ const path = require("path");
 const SCAN_RESULTS_FILE = path.join(__dirname, "../scan_results.json");
 const PROCESSED_FILE = path.join(__dirname, "processed_cids.json");
 
+const argv = process.argv.slice(2);
+const runOnce = argv.includes("--once");
+const cidArg = argv.find((arg) => arg.startsWith("--cid="));
+const targetCid = cidArg ? cidArg.split("=")[1] : null;
+
 function cidToNumber(cidString) {
     const hex = Buffer.from(cidString).toString("hex").slice(0, 30);
     return BigInt("0x" + hex);
@@ -97,14 +102,26 @@ async function checkForNewScans() {
     }
 
     for (const result of results) {
+        if (targetCid && result.cid !== targetCid) continue;
         await generateProofFromScan(result);
     }
 }
 
-// Watch for new results every 10 seconds
-console.log("👀 WhisperGuard ZKP Watcher running...");
-console.log(`Watching for: ${SCAN_RESULTS_FILE}`);
-console.log("Press Ctrl+C to stop\n");
+if (runOnce) {
+    checkForNewScans()
+        .then(() => {
+            process.exit(0);
+        })
+        .catch((err) => {
+            console.error(err);
+            process.exit(1);
+        });
+} else {
+    // Watch for new results every 10 seconds
+    console.log("👀 WhisperGuard ZKP Watcher running...");
+    console.log(`Watching for: ${SCAN_RESULTS_FILE}`);
+    console.log("Press Ctrl+C to stop\n");
 
-checkForNewScans();
-setInterval(checkForNewScans, 10000);
+    checkForNewScans();
+    setInterval(checkForNewScans, 10000);
+}
