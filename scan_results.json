@@ -1,9 +1,8 @@
 [
   {
-    "cid": "bafkreicvaxehqhafed7y35z32eqimxbm27qw2amfq5lvbj7uxggudz25q4",
-    "status": "MALICIOUS",
-    "threat_confidence": "100.00%",
-    "analysis": "Financial UI Detected",
-    "engine": "WhisperGuard-CLIP-V1"
+    "cid": "bafkreia7n6g4yqopj7a5q4ehm2p7hdx3v5m3h3pdy7v3zsn5k2n6x4m5za",
+    "status": "SCAN_ERROR",
+    "threat_confidence": "0.00%",
+    "error": "HTTPSConnectionPool(host='ipfs.io', port=443): Read timed out. (read timeout=10)"
   }
 ]

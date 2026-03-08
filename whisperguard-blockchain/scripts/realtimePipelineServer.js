@@ -1,6 +1,8 @@
 const http = require("http");
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
+const { ethers } = require("ethers");
 
 const HOST = "127.0.0.1";
 const PORT = 8787;
@@ -9,6 +11,20 @@ const repoRoot = path.resolve(__dirname, "../..");
 const circuitsDir = path.join(repoRoot, "circuits");
 const blockchainDir = path.join(repoRoot, "whisperguard-blockchain");
 const scanResultsPath = path.join(repoRoot, "scan_results.json");
+const cidHashMapPath = path.join(repoRoot, "whisperguard-extension", "cidHashes.json");
+
+const RPC_URL = "https://ethereum-sepolia.publicnode.com";
+const ORACLE_ADDRESSES = [
+  "0x0403556d47162c91346C5Da245C966df283C0444",
+  "0x65F0bfE000a715ED45caBE9858b0849C5f6873A7",
+];
+const REPUTATION_ABI = ["function getReputation(bytes32 cidHash) view returns(uint256,uint256,string)"];
+
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const oracles = ORACLE_ADDRESSES.map((address) => ({
+  address,
+  client: new ethers.Contract(address, REPUTATION_ABI, provider),
+}));
 
 const jobs = new Map();
 const jobsByCid = new Map();
@@ -17,6 +33,70 @@ const NPX_BIN = process.platform === "win32" ? "npx.cmd" : "npx";
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function cidToNumber(cid) {
+  const hex = Buffer.from(String(cid)).toString("hex").slice(0, 30);
+  return BigInt("0x" + hex);
+}
+
+function normalizeCategory(score, category) {
+  const fromChain = String(category || "").trim().toLowerCase();
+  if (fromChain) return fromChain;
+  if (score >= 80) return "malicious";
+  if (score >= 50) return "suspicious";
+  return "good";
+}
+
+function computeCidHash(cid) {
+  try {
+    const map = JSON.parse(fs.readFileSync(cidHashMapPath, "utf-8"));
+    if (map && map[cid]) {
+      return ethers.toBeHex(BigInt(map[cid]), 32);
+    }
+  } catch {
+    // Fall back to deterministic CID->number hash if map is unavailable.
+  }
+  return ethers.toBeHex(cidToNumber(cid), 32);
+}
+
+async function getBestOnChainReputation(cid) {
+  const cidHash = computeCidHash(cid);
+  let best = null;
+
+  for (const oracle of oracles) {
+    try {
+      const rep = await oracle.client.getReputation(cidHash);
+      const score = Number(rep[0]);
+      const reports = Number(rep[1]);
+      if (reports === 0) continue;
+
+      const entry = {
+        cid,
+        cidHash,
+        score: rep[0].toString(),
+        reports: rep[1].toString(),
+        category: normalizeCategory(score, rep[2]),
+        oracleAddress: oracle.address,
+      };
+
+      if (entry.category === "malicious") {
+        return entry;
+      }
+
+      if (!best || Number(entry.reports) > Number(best.reports)) {
+        best = entry;
+      }
+    } catch {
+      // Skip oracle read failures and continue with remaining oracles.
+    }
+  }
+
+  return best;
 }
 
 function createJob(cid) {
@@ -34,6 +114,20 @@ function createJob(cid) {
   };
   jobs.set(id, job);
   jobsByCid.set(cid, id);
+  return job;
+}
+
+function getOrCreateJob(cid) {
+  const existingId = jobsByCid.get(cid);
+  if (existingId) {
+    const existing = jobs.get(existingId);
+    if (existing && (existing.status === "running" || existing.status === "queued")) {
+      return existing;
+    }
+  }
+
+  const job = createJob(cid);
+  runPipeline(job);
   return job;
 }
 
@@ -240,9 +334,83 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      const job = createJob(cid);
+      const job = getOrCreateJob(cid);
       sendJson(res, 202, job);
-      runPipeline(job);
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/evaluate") {
+      const body = await readBody(req);
+      const cid = body && body.cid ? String(body.cid).trim() : "";
+      const waitMsRaw = body && body.waitMs != null ? Number(body.waitMs) : 15000;
+      const waitMs = Number.isFinite(waitMsRaw) && waitMsRaw >= 0 ? Math.min(waitMsRaw, 60000) : 15000;
+      if (!cid) {
+        sendJson(res, 400, { error: "cid is required" });
+        return;
+      }
+
+      const onChain = await getBestOnChainReputation(cid);
+      if (onChain) {
+        sendJson(res, 200, {
+          source: "blockchain",
+          decision: onChain.category === "malicious" ? "block" : "allow",
+          ...onChain,
+          pipeline: null,
+        });
+        return;
+      }
+
+      const job = getOrCreateJob(cid);
+      const startedAt = Date.now();
+
+      while (Date.now() - startedAt < waitMs) {
+        if (job.aiResult) {
+          sendJson(res, 200, {
+            source: "ai",
+            decision: job.aiResult.category === "malicious" ? "block" : "allow",
+            cid,
+            aiResult: job.aiResult,
+            pipeline: {
+              jobId: job.jobId,
+              status: job.status,
+              stage: job.stage,
+              message: job.message,
+            },
+            note: "ZKP and blockchain persistence continue asynchronously in backend.",
+          });
+          return;
+        }
+
+        if (job.status === "failed") {
+          sendJson(res, 500, {
+            source: "pipeline",
+            decision: "error",
+            cid,
+            pipeline: {
+              jobId: job.jobId,
+              status: job.status,
+              stage: job.stage,
+              message: job.message,
+            },
+          });
+          return;
+        }
+
+        await sleep(1000);
+      }
+
+      sendJson(res, 202, {
+        source: "pipeline",
+        decision: "pending",
+        cid,
+        pipeline: {
+          jobId: job.jobId,
+          status: job.status,
+          stage: job.stage,
+          message: job.message,
+        },
+        note: "AI decision not ready yet; poll GET /jobs/{jobId}.",
+      });
       return;
     }
 
