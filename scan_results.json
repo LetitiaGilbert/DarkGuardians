@@ -1,8 +1,9 @@
 [
   {
-    "cid": "bafkreia7n6g4yqopj7a5q4ehm2p7hdx3v5m3h3pdy7v3zsn5k2n6x4m5za",
-    "status": "SCAN_ERROR",
-    "threat_confidence": "0.00%",
-    "error": "HTTPSConnectionPool(host='ipfs.io', port=443): Read timed out. (read timeout=10)"
+    "status": "SAFE",
+    "analysis": "No malicious script patterns detected",
+    "threat_confidence": "73.94%",
+    "engine": "WhisperGuard-CodeBERT-V1",
+    "cid": "files"
   }
 ]
