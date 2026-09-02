@@ -2,8 +2,6 @@
 
 DarkGuardians detects risky IPFS content using a blockchain-first policy, AI classification, and ZK-backed reporting.
 
-This README is the single source of truth for running the project and doing a live demo.
-
 ## What It Does
 
 - Checks CID reputation from Sepolia first.
